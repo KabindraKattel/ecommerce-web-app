@@ -6,5 +6,7 @@ class ColorConstants {
   static const Color kBlack = Color.fromRGBO(0, 0, 0, 1);
 
   static const Color kGreen = Color.fromRGBO(0, 0xFF, 0, 1);
+  static const Color kBlue = Color.fromRGBO(0, 0, 0xFF, 1);
+  static const Color kAppColor = Color(0xFF228972);
   static const Color kErrorRed = Color(0xFFB71C1C);
 }

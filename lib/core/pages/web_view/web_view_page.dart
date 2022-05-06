@@ -42,6 +42,7 @@ class _WebViewPageState extends ConsumerState<WebViewPage> {
       ));
 
   late PullToRefreshController pullToRefreshController;
+  final TextEditingController urlController = TextEditingController();
   double progress = 0;
   String? error;
 
@@ -61,6 +62,7 @@ class _WebViewPageState extends ConsumerState<WebViewPage> {
 
   @override
   void dispose() {
+    urlController.dispose();
     scaffoldMessengerKey.currentState?.hideCurrentSnackBar();
     super.dispose();
   }
@@ -108,7 +110,39 @@ class _WebViewPageState extends ConsumerState<WebViewPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.title),
+          title: Theme(
+            data: Theme.of(context).copyWith(
+              textSelectionTheme: TextSelectionThemeData(
+                cursorColor:
+                    Theme.of(context).primaryColor.getForegroundColor(),
+                selectionColor: Theme.of(context)
+                    .primaryColor
+                    .getForegroundColor()
+                    .getForegroundColor(),
+                selectionHandleColor: Theme.of(context)
+                    .primaryColor
+                    .getForegroundColor()
+                    .getForegroundColor(),
+              ),
+            ),
+            child: TextField(
+              style: TextStyle(
+                  color: Theme.of(context).primaryColor.getForegroundColor()),
+              decoration: InputDecoration(
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: Theme.of(context).primaryColor.getForegroundColor(),
+                ),
+              ),
+              controller: urlController,
+              keyboardType: TextInputType.url,
+              onSubmitted: (value) {
+                var url = Uri.tryParse(value);
+                url ??= Uri.parse("https://www.google.com/search?q=" + value);
+                _webViewController?.loadUrl(urlRequest: URLRequest(url: url));
+              },
+            ),
+          ),
           leading: FutureBuilder<Widget>(
             future: _buildLeadingButton(context),
             builder: (context, snapshot) {
@@ -120,6 +154,18 @@ class _WebViewPageState extends ConsumerState<WebViewPage> {
             },
           ),
           actions: [
+            IconButton(
+              onPressed: () {
+                setState(() {
+                  urlController.text = widget.url;
+                  _webViewController?.loadUrl(
+                      urlRequest:
+                          URLRequest(url: Uri.parse(urlController.text)));
+                });
+              },
+              icon: const Icon(Icons.link),
+              tooltip: "DEFAULT URL",
+            ),
             FutureBuilder<Widget>(
               future: _buildRefreshButton(context),
               builder: (context, snapshot) {
@@ -142,7 +188,11 @@ class _WebViewPageState extends ConsumerState<WebViewPage> {
                   : 0,
           children: [
             _buildInAppWebView(),
-            Center(child: CircularProgressIndicator(value: progress)),
+            Center(
+                child: CircularProgressIndicator(
+                    backgroundColor:
+                        Theme.of(context).primaryColor.withOpacity(0.4),
+                    value: progress)),
             MyErrorWidget(
                 error: error,
                 onRetry: () async {
@@ -173,6 +223,12 @@ class _WebViewPageState extends ConsumerState<WebViewPage> {
       },
       shouldOverrideUrlLoading: (controller, navigationAction) async {
         return NavigationActionPolicy.ALLOW;
+      },
+      onLoadStart: (controller, url) async {
+        setState(() {
+          error = null;
+          urlController.text = url?.toString() ?? '';
+        });
       },
       onLoadStop: (controller, url) async {
         debugPrint("Navigated to $url");

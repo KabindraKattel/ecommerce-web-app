@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
         scaffoldMessengerKey: scaffoldMessengerKey,
         title: StringConstants.kAppName,
         theme: ThemeData(
-          primarySwatch: ColorConstants.kGreen.toMaterialColor(),
+          primarySwatch: ColorConstants.kAppColor.toMaterialColor(),
         ),
         home: WebViewPage(
           url: EndPoints.kBaseUrl,
