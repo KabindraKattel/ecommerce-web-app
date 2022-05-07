@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tv/core/exceptions/exceptions.dart';
 import 'package:tv/core/extensions/color_extension.dart';
+import 'package:tv/core/resources/styles_constants.dart';
 import 'package:tv/core/utils/web_resource_error_message.dart';
 import 'package:tv/core/widgets/error_msg_snack_bar.dart';
 import 'package:tv/core/widgets/my_error.dart';
@@ -32,8 +34,6 @@ class WebViewPage extends HookConsumerWidget {
     ),
   );
 
-  final TextEditingController urlController = TextEditingController();
-
   final _key = GlobalKey();
 
   WebViewPage({
@@ -44,6 +44,7 @@ class WebViewPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final _webViewController = useState<InAppWebViewController?>(null);
+    final webTitle = useState<String>(title);
     final _webView = useState<InAppWebView?>(null);
     final loading = useState<bool>(true);
     final error = useState<String?>(null);
@@ -55,8 +56,8 @@ class WebViewPage extends HookConsumerWidget {
           },
         ));
     final progress = useState<double>(0);
-    _webView.value ??=
-        _buildInAppWebView(ref, _webViewController, loading, error, progress);
+    _webView.value ??= _buildInAppWebView(
+        ref, webTitle, _webViewController, loading, error, progress);
     ref.listen<AsyncValue<bool>>(watchConnectivityProvider, (previous, next) {
       next.maybeWhen(
           data: (hasConnection) async {
@@ -97,39 +98,11 @@ class WebViewPage extends HookConsumerWidget {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Theme(
-            data: Theme.of(context).copyWith(
-              textSelectionTheme: TextSelectionThemeData(
-                cursorColor:
-                    Theme.of(context).primaryColor.getForegroundColor(),
-                selectionColor: Theme.of(context)
-                    .primaryColor
-                    .getForegroundColor()
-                    .getForegroundColor(),
-                selectionHandleColor: Theme.of(context)
-                    .primaryColor
-                    .getForegroundColor()
-                    .getForegroundColor(),
-              ),
-            ),
-            child: TextField(
-              style: TextStyle(
-                  color: Theme.of(context).primaryColor.getForegroundColor()),
-              decoration: InputDecoration(
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: Theme.of(context).primaryColor.getForegroundColor(),
-                ),
-              ),
-              controller: urlController,
-              keyboardType: TextInputType.url,
-              onSubmitted: (value) {
-                var url = Uri.tryParse(value);
-                url ??= Uri.parse("https://www.google.com/search?q=" + value);
-                _webViewController.value
-                    ?.loadUrl(urlRequest: URLRequest(url: url));
-              },
-            ),
+          title: AutoSizeText(
+            webTitle.value,
+            minFontSize: StylesConstants.kSubTitleSize,
+            maxFontSize: StylesConstants.kTitleSize,
+            maxLines: 1,
           ),
           leading: FutureBuilder<Widget>(
             future: _buildLeadingButton(
@@ -143,15 +116,6 @@ class WebViewPage extends HookConsumerWidget {
             },
           ),
           actions: [
-            IconButton(
-              onPressed: () {
-                urlController.text = url;
-                _webViewController.value?.loadUrl(
-                    urlRequest: URLRequest(url: Uri.parse(urlController.text)));
-              },
-              icon: const Icon(Icons.link),
-              tooltip: "DEFAULT URL",
-            ),
             FutureBuilder<Widget>(
               future: _buildRefreshButton(
                   context, _webViewController, loading, error),
@@ -193,6 +157,7 @@ class WebViewPage extends HookConsumerWidget {
 
   InAppWebView _buildInAppWebView(
       WidgetRef ref,
+      ValueNotifier<String> webTitle,
       ValueNotifier<InAppWebViewController?> _webviewController,
       ValueNotifier<bool> loading,
       ValueNotifier<String?> error,
@@ -219,14 +184,15 @@ class WebViewPage extends HookConsumerWidget {
       },
       onLoadStart: (controller, url) async {
         loading.value = true;
-        urlController.text = url?.toString() ?? '';
       },
       onLoadStop: (controller, url) async {
         debugPrint("Navigated to $url");
         await pullToRefreshController.endRefreshing();
         loading.value = false;
       },
-      onTitleChanged: (controller, title) {},
+      onTitleChanged: (controller, titleText) {
+        webTitle.value = error.value != null ? 'ERROR !' : titleText ?? title;
+      },
       onLoadHttpError: (controller, url, code, message) {
         pullToRefreshController.endRefreshing();
         loading.value = false;
@@ -267,6 +233,7 @@ class WebViewPage extends HookConsumerWidget {
       return IconButton(
         icon: const Icon(Icons.refresh),
         color: Theme.of(context).primaryColor.getForegroundColor(),
+        tooltip: "Reload",
         onPressed: () async => await reload(_webViewController, loading, error),
       );
     } else {
