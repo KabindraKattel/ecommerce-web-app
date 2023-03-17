@@ -1,3 +1,3 @@
 class StringConstants {
-  static const String kAppName = "TV";
+  static const String kAppName = "E Shopping";
 }

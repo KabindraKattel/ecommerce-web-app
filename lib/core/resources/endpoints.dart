@@ -1,3 +1,4 @@
 class EndPoints {
-  static const String kBaseUrl = 'https://itbridgenepal.com.np';
+  static const String kBaseUrl =
+      'http://judicialbethanchowk.digitalpalika.com/';
 }
